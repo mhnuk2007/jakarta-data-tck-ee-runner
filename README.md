@@ -21,7 +21,7 @@ It is designed to make it easy to:
 
 **Phase 1 — Initial TCK Runner: Complete**
 
-The runner has successfully executed:
+The runner has successfully executed the complete asynchronous TCK test class:
 
 ```text
 ee.jakarta.tck.data.web.async.AsyncTests
@@ -30,10 +30,30 @@ ee.jakarta.tck.data.web.async.AsyncTests
 Test result:
 
 ```text
-Tests run: 2, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
 ```
 
-The test was executed against a locally built Open Liberty runtime with:
+The validated test class includes asynchronous repository tests covering:
+
+* Asynchronous find.
+* Asynchronous insert.
+* Exceptional completion of an asynchronous insert.
+
+The exceptional-completion test verifies that when an asynchronous repository operation fails because an entity with the same identifier already exists, the returned `CompletionStage` completes exceptionally with `EntityExistsException` as the underlying cause.
+
+The individual exceptional-completion test was also executed successfully:
+
+```text
+ee.jakarta.tck.data.web.async.AsyncTests#testAsynchronousInsertExceptionalCompletion
+```
+
+Result:
+
+```text
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
+```
+
+The tests were executed against a locally built Open Liberty runtime with:
 
 ```text
 data-1.1
@@ -55,6 +75,8 @@ The validated environment included:
 * Maven
 * Apache Derby
 * Arquillian
+
+This validates that the generic runner consumes the locally built Jakarta Data 1.1 TCK and executes the tests end-to-end against the Open Liberty Jakarta Data 1.1 runtime.
 
 ## Requirements
 
@@ -203,7 +225,7 @@ The selected TCK result should also report zero failures and errors.
 Example:
 
 ```text
-Tests run: 2, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
 ```
 
 followed by:
