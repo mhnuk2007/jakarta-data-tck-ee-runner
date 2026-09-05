@@ -1,0 +1,391 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ ~ Copyright (c) 2022, 2026 Contributors to the Eclipse Foundation
+ ~
+ ~ This program and the accompanying materials are made available under the
+ ~ terms of the Eclipse Public License v. 2.0, which is available at
+ ~ http://www.eclipse.org/legal/epl-2.0.
+ ~
+ ~ This Source Code may also be made available under the following Secondary
+ ~ Licenses when the conditions for such availability set forth in the
+ ~ Eclipse Public License v. 2.0 are satisfied: GNU General Public License,
+ ~ version 2 with the GNU Classpath Exception, which is available at
+ ~ https://www.gnu.org/software/classpath/license.html.
+ ~
+ ~ SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>jakarta.data</groupId>
+    <artifactId>data-tck-ee-runner</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <name>Jakarta Data TCK Runner for Open Liberty</name>
+
+    <properties>
+
+        <!-- General properties -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <maven.compiler.release>17</maven.compiler.release>
+        <maven.compiler.testRelease>17</maven.compiler.testRelease>
+
+        <!-- Dependency and Plugin Versions -->
+        <jakarta.data.version>1.1.0-SNAPSHOT</jakarta.data.version>
+        <jakarta.servlet.version>6.1.0</jakarta.servlet.version>
+        <jakarta.enterprise.cdi.version>4.1.0</jakarta.enterprise.cdi.version>
+
+        <arquillian.version>1.10.2.Final</arquillian.version>
+        <arquillian.jakarta.version>10.0.0.Final</arquillian.jakarta.version>
+        <junit.version>6.1.3</junit.version>
+        <sigtest.version>2.7</sigtest.version>
+        <shrinkwrap.version>1.2.6</shrinkwrap.version>
+        <shrinkwrap.resolver.version>3.3.7</shrinkwrap.resolver.version>
+
+        <maven.dep.plugin.version>3.3.0</maven.dep.plugin.version>
+        <maven.comp.plugin.version>3.15.0</maven.comp.plugin.version>
+        <maven.surefire.plugin.version>3.5.6</maven.surefire.plugin.version>
+        <liberty.maven.plugin.version>3.11.2</liberty.maven.plugin.version>
+
+        <derby.version>10.17.1.0</derby.version>
+
+        <!--
+             Open Liberty installation directory.
+
+             Default:
+               target/liberty/wlp
+
+             For a locally built Open Liberty runtime containing Jakarta Data 1.1:
+               -Dliberty.installDirectory=/d/opensource/open-liberty/dev/build.image/wlp
+
+             Keeping this configurable makes the runner reusable for other
+             Open Liberty installations and future Jakarta Data TCK versions.
+        -->
+        <liberty.installDirectory>${project.build.directory}/liberty/wlp</liberty.installDirectory>
+
+        <!-- Arquillian uses the same Liberty installation. -->
+        <wlp>${liberty.installDirectory}</wlp>
+
+        <!-- Shared resources are relative to the Liberty installation being tested. -->
+        <shared.resource.dir>${wlp}/usr/shared/resources</shared.resource.dir>
+
+        <application.server.lib>
+            ${wlp}/usr/servers/${tck_server}/lib/global
+        </application.server.lib>
+
+        <!-- Java Util Logging configuration -->
+        <logging.config>${project.basedir}/logging.properties</logging.config>
+
+        <!-- jimage output directory -->
+        <jimage.dir>${project.build.directory}/jimage/</jimage.dir>
+
+        <!-- Default TCK groups. Can be overridden from the command line. -->
+        <includedTests>web &amp; persistence</includedTests>
+
+        <!-- Arquillian / Open Liberty connection properties -->
+        <tck_server>defaultServer</tck_server>
+        <tck_hostname>localhost</tck_hostname>
+        <tck_username>admin</tck_username>
+        <tck_password>adminpwd</tck_password>
+        <tck_port>9080</tck_port>
+        <tck_protocol>servlet</tck_protocol>
+
+    </properties>
+
+    <repositories>
+        <!-- Add staging/private repositories here when required. -->
+    </repositories>
+
+    <!-- ================================================================
+         Dependency Management
+         ================================================================ -->
+    <dependencyManagement>
+        <dependencies>
+
+            <dependency>
+                <groupId>org.junit</groupId>
+                <artifactId>junit-bom</artifactId>
+                <version>${junit.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.jboss.arquillian</groupId>
+                <artifactId>arquillian-bom</artifactId>
+                <version>${arquillian.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.jboss.arquillian.jakarta</groupId>
+                <artifactId>arquillian-jakarta-bom</artifactId>
+                <version>${arquillian.jakarta.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.jboss.shrinkwrap</groupId>
+                <artifactId>shrinkwrap-bom</artifactId>
+                <version>${shrinkwrap.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.jboss.shrinkwrap.resolver</groupId>
+                <artifactId>shrinkwrap-resolver-bom</artifactId>
+                <version>${shrinkwrap.resolver.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
+
+    <!-- ================================================================
+         Dependencies
+         ================================================================ -->
+    <dependencies>
+
+        <!-- Jakarta Data TCK -->
+        <dependency>
+            <groupId>jakarta.data</groupId>
+            <artifactId>jakarta.data-tck</artifactId>
+            <version>${jakarta.data.version}</version>
+        </dependency>
+
+        <!-- Jakarta Data API -->
+        <dependency>
+            <groupId>jakarta.data</groupId>
+            <artifactId>jakarta.data-api</artifactId>
+            <version>${jakarta.data.version}</version>
+        </dependency>
+
+        <!-- Arquillian JUnit 5 -->
+        <dependency>
+            <groupId>org.jboss.arquillian.junit5</groupId>
+            <artifactId>arquillian-junit5-container</artifactId>
+        </dependency>
+
+        <!-- Open Liberty Arquillian managed container -->
+        <dependency>
+            <groupId>io.openliberty.arquillian</groupId>
+            <artifactId>arquillian-liberty-managed-jakarta</artifactId>
+            <version>3.0.0</version>
+        </dependency>
+
+        <!-- JUnit 5 -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-launcher</artifactId>
+        </dependency>
+
+        <!-- Signature Test -->
+        <dependency>
+            <groupId>jakarta.tck</groupId>
+            <artifactId>sigtest-maven-plugin</artifactId>
+            <version>${sigtest.version}</version>
+        </dependency>
+
+        <!-- Jakarta EE APIs supplied by the server -->
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <version>${jakarta.servlet.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>jakarta.enterprise</groupId>
+            <artifactId>jakarta.enterprise.cdi-api</artifactId>
+            <version>${jakarta.enterprise.cdi.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>jakarta.transaction</groupId>
+            <artifactId>jakarta.transaction-api</artifactId>
+            <version>2.0.1</version>
+        </dependency>
+
+        <!-- Embedded Derby used by DefaultDataSource -->
+        <dependency>
+            <groupId>org.apache.derby</groupId>
+            <artifactId>derby</artifactId>
+            <version>${derby.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+    </dependencies>
+
+    <!-- ================================================================
+         Build
+         ================================================================ -->
+    <build>
+
+        <directory>target</directory>
+
+        <defaultGoal>clean verify</defaultGoal>
+
+        <plugins>
+
+            <!-- ============================================================
+                 Compiler
+                 ============================================================ -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven.comp.plugin.version}</version>
+                <configuration>
+                    <release>${maven.compiler.release}</release>
+                </configuration>
+            </plugin>
+
+            <!-- ============================================================
+                 Copy Derby driver into Liberty shared resources
+                 ============================================================ -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>${maven.dep.plugin.version}</version>
+
+                <executions>
+                    <execution>
+                        <id>copy-derby-driver</id>
+                        <phase>process-test-resources</phase>
+
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+
+                        <configuration>
+                            <outputDirectory>
+                                ${shared.resource.dir}/derby
+                            </outputDirectory>
+
+                            <includeArtifactIds>derby</includeArtifactIds>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- ============================================================
+                 Open Liberty
+
+                 The runner only creates/configures the server here.
+                 Arquillian's managed container starts and stops it during
+                 test execution.
+                 ============================================================ -->
+            <plugin>
+                <groupId>io.openliberty.tools</groupId>
+                <artifactId>liberty-maven-plugin</artifactId>
+                <version>${liberty.maven.plugin.version}</version>
+
+                <configuration>
+
+                    <!--
+                         Default:
+                           target/liberty/wlp
+
+                         Local Open Liberty Data 1.1 build:
+                           -Dliberty.installDirectory=/d/opensource/open-liberty/dev/build.image/wlp
+                    -->
+                    <installDirectory>${liberty.installDirectory}</installDirectory>
+
+                    <serverName>${tck_server}</serverName>
+
+                    <configFile>
+                        ${project.basedir}/src/main/liberty/config/server.xml
+                    </configFile>
+
+                    <bootstrapProperties>
+                        <default.http.port>${tck_port}</default.http.port>
+                    </bootstrapProperties>
+
+                </configuration>
+
+                <executions>
+                    <execution>
+                        <id>create-liberty</id>
+                        <phase>process-test-resources</phase>
+
+                        <goals>
+                            <goal>create</goal>
+                        </goals>
+                    </execution>
+                </executions>
+
+            </plugin>
+
+            <!-- ============================================================
+                 Surefire / Jakarta Data TCK
+                 ============================================================ -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${maven.surefire.plugin.version}</version>
+
+                <configuration>
+
+                    <!-- Execute tests contained in the Jakarta Data TCK dependency. -->
+                    <dependenciesToScan>
+                        <dependency>
+                            jakarta.data:jakarta.data-tck
+                        </dependency>
+                    </dependenciesToScan>
+
+                    <systemPropertyVariables>
+
+                        <!-- Arquillian -->
+                        <tck_server>${tck_server}</tck_server>
+                        <tck_hostname>${tck_hostname}</tck_hostname>
+                        <tck_username>${tck_username}</tck_username>
+                        <tck_password>${tck_password}</tck_password>
+                        <tck_port>${tck_port}</tck_port>
+                        <wlp>${wlp}</wlp>
+                        <tck_protocol>${tck_protocol}</tck_protocol>
+
+                        <!-- Signature test -->
+                        <jimage.dir>${jimage.dir}</jimage.dir>
+
+                        <signature.sigTestClasspath>
+                            ${settings.localRepository}/jakarta/data/jakarta.data-api/${jakarta.data.version}/jakarta.data-api-${jakarta.data.version}.jar:${jimage.dir}/java.base:${jimage.dir}/java.rmi:${jimage.dir}/java.sql:${jimage.dir}/java.naming
+                        </signature.sigTestClasspath>
+
+                        <!-- Logging -->
+                        <java.util.logging.config.file>${logging.config}</java.util.logging.config.file>
+
+                        <!-- TCK deployment -->
+                        <jakarta.tck.skip.deployment>false</jakarta.tck.skip.deployment>
+
+                    </systemPropertyVariables>
+
+                    <!-- TCK groups -->
+                    <groups>${includedTests}</groups>
+
+                    <!-- Jakarta TCK tests are supplied by the dependency. -->
+                    <testSourceDirectory>${basedir}/src/main/java/</testSourceDirectory>
+
+                    <!-- Windows/JDK classpath URL handling -->
+                    <argLine>
+                        -Djdk.net.URLClassPath.disableClassPathURLCheck=true
+                    </argLine>
+
+                </configuration>
+            </plugin>
+
+        </plugins>
+
+    </build>
+
+</project>

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<server description="Jakarta Data 1.1 TCK runner server">
+
+    <!--
+         Features required by the Jakarta Data TCK.
+
+         data-1.1:
+             Jakarta Data 1.1 implementation supplied by Open Liberty.
+
+         persistence-3.2:
+             Jakarta Persistence support used by the current Open Liberty
+             Jakarta Data 1.1 implementation.
+
+         cdi-4.1:
+             CDI support required for repository injection and TCK tests.
+
+         pages-4.0:
+             Jakarta EE 11 web support required by the TCK/Arquillian setup.
+
+         jndi-1.0:
+             JNDI support required by the test environment.
+
+         localConnector-1.0:
+             Local connector used by the Arquillian Liberty managed adapter.
+    -->
+    <featureManager>
+        <feature>data-1.1</feature>
+        <feature>persistence-3.2</feature>
+        <feature>cdi-4.1</feature>
+        <feature>pages-4.0</feature>
+        <feature>jndi-1.0</feature>
+        <feature>localConnector-1.0</feature>
+    </featureManager>
+
+    <!-- Must match ${tck_port} in pom.xml. -->
+    <httpEndpoint id="defaultHttpEndpoint"
+                  httpPort="${default.http.port}"
+                  httpsPort="-1"
+                  host="*"/>
+
+    <!-- Required by the Arquillian Liberty Managed adapter. -->
+    <applicationMonitor updateTrigger="mbean"/>
+
+    <!--
+         DefaultDataSource backs java:comp/DefaultDataSource.
+
+         Derby is used as the embedded database so the runner does not
+         require an externally managed database.
+
+         The dataSource identifier must be DefaultDataSource because
+         Jakarta Data repositories that do not specify another data store
+         use java:comp/DefaultDataSource.
+
+         Do not add a jndiName attribute here. Liberty provides the
+         component-scoped DefaultDataSource binding automatically.
+    -->
+    <library id="DerbyLib">
+        <fileset dir="${shared.resource.dir}/derby"
+                 includes="*.jar"/>
+    </library>
+
+    <dataSource id="DefaultDataSource">
+        <jdbcDriver libraryRef="DerbyLib"/>
+        <properties.derby.embedded
+                databaseName="${shared.resource.dir}/data/tckdb"
+                createDatabase="create"/>
+    </dataSource>
+
+    <logging traceSpecification="*=warning"
+             consoleLogLevel="INFO"/>
+
+</server>
