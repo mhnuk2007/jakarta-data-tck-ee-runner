@@ -285,6 +285,14 @@ Such failures should be distinguished from problems in the generic runner itself
 
 The goal of this project is to provide a reliable test harness so that these failures can be isolated and reported accurately.
 
+### Open Liberty Persistence 4.0 dependency
+
+Some Jakarta Data 1.1 TCK tests use Jakarta Persistence 4.0 query annotations such as `jakarta.persistence.query.JakartaQuery` and `jakarta.persistence.query.NativeQuery`.
+
+The current Open Liberty Jakarta Data 1.1 implementation uses temporary Jakarta Data query annotations while the tested Open Liberty runtime does not yet provide the required Jakarta Persistence 4.0 functionality. As a result, TCK tests that depend on these Persistence 4.0 query APIs may fail during repository initialization.
+
+Such failures should be treated as Open Liberty runtime capability limitations, not as failures of the generic TCK runner.
+
 ## Development
 
 Clone the repository:
