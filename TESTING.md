@@ -247,6 +247,22 @@ The same Maven commands used for local testing should remain usable in CI wherev
 
 CI configuration can be added independently from the generic test runner.
 
+## Resuming runs
+
+A helper script is provided to resume an interrupted TCK run by re-running only test classes that did not previously pass. The Windows PowerShell helper is available at scripts\continue-run.ps1.
+
+Usage (example):
+
+```powershell
+powershell -File scripts\continue-run.ps1 -Test ee.jakarta.tck.data.web.async.AsyncTests -LibertyInstallDirectory C:\path\to\wlp
+```
+
+Notes:
+
+- The helper is a best-effort tool that relies on Surefire JUnit XML reports written to target/surefire-reports.
+- You must supply the original test selection (comma-separated) via -Test so the helper can determine remaining tests.
+- The helper parses TEST-*.xml files and treats a testsuite as "passed" when it has zero failures and zero errors.
+
 ## Test Philosophy
 
 This project follows a minimal-runner principle:
