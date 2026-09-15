@@ -1,0 +1,29 @@
+name: Continue helper validation
+
+on:
+  push:
+    paths:
+      - "scripts/**"
+      - "README.md"
+      - "TESTING.md"
+      - ".github/workflows/continue-helper.yml"
+  pull_request:
+    paths:
+      - "scripts/**"
+      - "README.md"
+      - "TESTING.md"
+      - ".github/workflows/continue-helper.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate continue helper
+        shell: pwsh
+        run: ./scripts/validate-continue-run.ps1

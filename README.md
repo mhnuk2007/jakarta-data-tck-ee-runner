@@ -199,6 +199,8 @@ mvn clean verify \
 
 See [TESTING.md](TESTING.md) for more testing guidance.
 
+For resuming interrupted runs on Windows, see scripts\continue-run.ps1 — a small PowerShell helper that re-runs only tests that did not previously pass (best-effort; requires the original test selection).
+
 ## Verifying Jakarta Data 1.1
 
 When validating a Jakarta Data 1.1 test, verify that the Open Liberty startup log reports:
