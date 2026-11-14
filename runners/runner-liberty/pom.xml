@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>jakarta.data</groupId>
+        <artifactId>data-tck-ee-runner</artifactId>
+        <version>1.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>runner-liberty</artifactId>
+    <packaging>jar</packaging>
+
+    <name>Jakarta Data TCK Runner for Open Liberty</name>
+
+    <properties>
+        <liberty.maven.plugin.version>3.11.2</liberty.maven.plugin.version>
+        <derby.version>10.17.1.0</derby.version>
+
+        <!-- Open Liberty installation directory -->
+        <liberty.installDirectory>${project.build.directory}/liberty/wlp</liberty.installDirectory>
+        <wlp>${liberty.installDirectory}</wlp>
+
+        <shared.resource.dir>${wlp}/usr/shared/resources</shared.resource.dir>
+
+        <tck_server>defaultServer</tck_server>
+        <tck_port>9080</tck_port>
+        <tck_protocol>servlet</tck_protocol>
+
+        <application.server.lib>
+            ${wlp}/usr/servers/${tck_server}/lib/global
+        </application.server.lib>
+
+        <!-- Logging configuration -->
+        <logging.config>${project.basedir}/logging.properties</logging.config>
+
+        <!-- jimage output directory -->
+        <jimage.dir>${project.build.directory}/jimage/</jimage.dir>
+    </properties>
+
+    <dependencies>
+        <!-- Jakarta Data TCK -->
+        <dependency>
+            <groupId>jakarta.data</groupId>
+            <artifactId>jakarta.data-tck</artifactId>
+        </dependency>
+
+        <!-- Jakarta Data API -->
+        <dependency>
+            <groupId>jakarta.data</groupId>
+            <artifactId>jakarta.data-api</artifactId>
+        </dependency>
+
+        <!-- Jakarta CDI API -->
+        <dependency>
+            <groupId>jakarta.enterprise</groupId>
+            <artifactId>jakarta.enterprise.cdi-api</artifactId>
+        </dependency>
+
+        <!-- Jakarta Servlet API -->
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+        </dependency>
+
+        <!-- Arquillian JUnit 5 container -->
+        <dependency>
+            <groupId>org.jboss.arquillian.junit5</groupId>
+            <artifactId>arquillian-junit5-container</artifactId>
+        </dependency>
+
+        <!-- Open Liberty Arquillian managed container -->
+        <dependency>
+            <groupId>io.openliberty.arquillian</groupId>
+            <artifactId>arquillian-liberty-managed-jakarta</artifactId>
+            <version>3.0.0</version>
+        </dependency>
+
+        <!-- JUnit 5 -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-launcher</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Signature Test -->
+        <dependency>
+            <groupId>jakarta.tck</groupId>
+            <artifactId>sigtest-maven-plugin</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jboss.shrinkwrap</groupId>
+            <artifactId>shrinkwrap-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>jakarta.transaction</groupId>
+            <artifactId>jakarta.transaction-api</artifactId>
+            <version>2.0.1</version>
+        </dependency>
+
+        <!-- Embedded Derby used by DefaultDataSource -->
+        <dependency>
+            <groupId>org.apache.derby</groupId>
+            <artifactId>derby</artifactId>
+            <version>${derby.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.derby</groupId>
+            <artifactId>derbytools</artifactId>
+            <version>${derby.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.derby</groupId>
+            <artifactId>derbyshared</artifactId>
+            <version>${derby.version}</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <testResources>
+            <testResource>
+                <directory>${project.basedir}/src/test/resources</directory>
+                <filtering>true</filtering>
+            </testResource>
+        </testResources>
+
+        <plugins>
+            <!-- Copy Derby driver into Liberty shared resources -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-derby-driver</id>
+                        <phase>process-test-resources</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>
+                                ${shared.resource.dir}/derby
+                            </outputDirectory>
+                            <includeArtifactIds>derby,derbytools,derbyshared</includeArtifactIds>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Liberty Maven Plugin -->
+            <plugin>
+                <groupId>io.openliberty.tools</groupId>
+                <artifactId>liberty-maven-plugin</artifactId>
+                <version>${liberty.maven.plugin.version}</version>
+                <configuration>
+                    <installDirectory>${liberty.installDirectory}</installDirectory>
+                    <serverName>${tck_server}</serverName>
+                    <configFile>${project.basedir}/src/main/liberty/config/server.xml</configFile>
+                    <bootstrapProperties>
+                        <default.http.port>${tck_port}</default.http.port>
+                    </bootstrapProperties>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>create-liberty</id>
+                        <phase>process-test-resources</phase>
+                        <goals>
+                            <goal>create</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Surefire Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!-- Execute tests contained in the Jakarta Data TCK dependency -->
+                    <dependenciesToScan>
+                        <dependency>jakarta.data:jakarta.data-tck</dependency>
+                    </dependenciesToScan>
+
+                    <systemPropertyVariables>
+                        <!-- Arquillian -->
+                        <tck_server>${tck_server}</tck_server>
+                        <tck_hostname>${tck_hostname}</tck_hostname>
+                        <tck_username>${tck_username}</tck_username>
+                        <tck_password>${tck_password}</tck_password>
+                        <tck_port>${tck_port}</tck_port>
+                        <wlp>${wlp}</wlp>
+                        <tck_protocol>${tck_protocol}</tck_protocol>
+
+                        <!-- Signature test -->
+                        <jimage.dir>${jimage.dir}</jimage.dir>
+                        <signature.sigTestClasspath>
+                            ${settings.localRepository}/jakarta/data/jakarta.data-api/${jakarta.data.version}/jakarta.data-api-${jakarta.data.version}.jar:${jimage.dir}/java.base:${jimage.dir}/java.rmi:${jimage.dir}/java.sql:${jimage.dir}/java.naming
+                        </signature.sigTestClasspath>
+
+                        <!-- Logging -->
+                        <java.util.logging.config.file>${logging.config}</java.util.logging.config.file>
+
+                        <!-- TCK deployment -->
+                        <jakarta.tck.skip.deployment>false</jakarta.tck.skip.deployment>
+                    </systemPropertyVariables>
+
+                    <!-- TCK groups -->
+                    <groups>${includedTests}</groups>
+
+                    <!-- Jakarta TCK tests are supplied by the dependency -->
+                    <testSourceDirectory>${basedir}/src/main/java/</testSourceDirectory>
+
+                    <!-- Windows/JDK classpath URL handling -->
+                    <argLine>
+                        -Djdk.net.URLClassPath.disableClassPathURLCheck=true
+                    </argLine>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
