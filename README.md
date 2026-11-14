@@ -1,6 +1,6 @@
 # Jakarta Data TCK Multi-Provider Runner
 
-A standalone, multi-provider Maven/Arquillian test runner for executing the **Jakarta Data 1.1 TCK** against **Jakarta EE application servers** (including **Open Liberty** and **GlassFish**).
+A standalone, multi-provider Maven/Arquillian test runner for executing the **Jakarta Data 1.1 TCK** against **Jakarta EE application servers** (including **Open Liberty**, **GlassFish**, and **WildFly**).
 
 This project provides a fast, repeatable, and vendor-neutral environment for validating Jakarta Data 1.1 TCK scenarios, isolating runtime bugs, and conducting cross-server behavior comparisons without invoking slow monolithic server builds.
 
@@ -26,9 +26,12 @@ jakarta-data-tck-ee-runner/                       <-- Root aggregator & TCK BOM 
 │   │   └── src/
 │   │       ├── main/liberty/config/server.xml    <-- Liberty server config (DefaultDataSource, features)
 │   │       └── test/resources/arquillian.xml     <-- Liberty managed container configuration
-│   └── runner-glassfish/                         <-- GlassFish runner module
-│       ├── pom.xml                               <-- GlassFish Arquillian adapter & lifecycle
-│       └── src/test/resources/arquillian.xml     <-- GlassFish managed container configuration
+│   ├── runner-glassfish/                         <-- GlassFish runner module
+│   │   ├── pom.xml                               <-- GlassFish Arquillian adapter & lifecycle
+│   │   └── src/test/resources/arquillian.xml     <-- GlassFish managed container configuration
+│   └── runner-wildfly/                           <-- WildFly runner module
+│       ├── pom.xml                               <-- WildFly Arquillian adapter & lifecycle
+│       └── src/test/resources/arquillian.xml     <-- WildFly managed container configuration
 ```
 
 ---
@@ -40,6 +43,7 @@ jakarta-data-tck-ee-runner/                       <-- Root aggregator & TCK BOM 
   * Stateful persistence tests: `ee.jakarta.tck.data.standalone.persistence.stateful.StatefulPersistenceEntityTests` (Verified persistence context & Derby data source).
   * Runtime verified: Open Liberty with `data-1.1` and embedded Apache Derby `DefaultDataSource`.
 * **GlassFish Module (`runners/runner-glassfish`)**: **Integrated (Phase 2)**
+* **WildFly Module (`runners/runner-wildfly`)**: **Integrated (Phase 3)**
 
 ---
 
@@ -89,7 +93,15 @@ mvn test -pl runners/runner-glassfish \
   "-Dtest=AsyncTests"
 ```
 
-### 3. Running Across All Providers
+### 3. Running Against WildFly
+
+```bash
+mvn test -pl runners/runner-wildfly \
+  "-Dwildfly.home=/path/to/wildfly" \
+  "-Dtest=AsyncTests"
+```
+
+### 4. Running Across All Providers
 
 ```bash
 mvn test \
