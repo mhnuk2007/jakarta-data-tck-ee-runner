@@ -12,7 +12,7 @@
     <name>Jakarta Data TCK Multi-Provider Runner</name>
     <description>
         A multi-provider Maven/Arquillian test runner for executing the Jakarta Data 1.1 TCK
-        against Jakarta EE application servers (including Open Liberty and GlassFish).
+        against Jakarta EE application servers (including Open Liberty, GlassFish, and WildFly).
     </description>
 
     <modules>
