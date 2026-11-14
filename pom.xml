@@ -226,6 +226,20 @@
             <scope>provided</scope>
         </dependency>
 
+        <dependency>
+            <groupId>org.apache.derby</groupId>
+            <artifactId>derbytools</artifactId>
+            <version>${derby.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.derby</groupId>
+            <artifactId>derbyshared</artifactId>
+            <version>${derby.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
     </dependencies>
 
     <!-- ================================================================
@@ -273,7 +287,7 @@
                                 ${shared.resource.dir}/derby
                             </outputDirectory>
 
-                            <includeArtifactIds>derby</includeArtifactIds>
+                            <includeArtifactIds>derby,derbytools,derbyshared</includeArtifactIds>
                         </configuration>
                     </execution>
                 </executions>
