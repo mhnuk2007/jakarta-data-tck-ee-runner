@@ -39,7 +39,7 @@ jakarta-data-tck-ee-runner/                       <-- Root aggregator & TCK BOM 
   * Asynchronous TCK tests: `ee.jakarta.tck.data.web.async.AsyncTests` (All 3 tests passed including exceptional completion).
   * Stateful persistence tests: `ee.jakarta.tck.data.standalone.persistence.stateful.StatefulPersistenceEntityTests` (Verified persistence context & Derby data source).
   * Runtime verified: Open Liberty with `data-1.1` and embedded Apache Derby `DefaultDataSource`.
-* **GlassFish Module (`runners/runner-glassfish`)**: **In Progress (Phase 2)**
+* **GlassFish Module (`runners/runner-glassfish`)**: **Integrated (Phase 2)**
 
 ---
 
@@ -81,7 +81,7 @@ mvn test -pl runners/runner-liberty \
   "-Dtest=StatefulPersistenceEntityTests#testModifyPersistedEntity"
 ```
 
-### 2. Running Against GlassFish (Phase 2)
+### 2. Running Against GlassFish
 
 ```bash
 mvn test -pl runners/runner-glassfish \
