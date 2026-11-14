@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>jakarta.data</groupId>
+        <artifactId>data-tck-ee-runner</artifactId>
+        <version>1.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>runner-glassfish</artifactId>
+    <packaging>jar</packaging>
+
+    <name>Jakarta Data TCK Runner for GlassFish</name>
+
+    <properties>
+        <omnifish.arquillian.version>2.2.1</omnifish.arquillian.version>
+
+        <!-- Target GlassFish distribution -->
+        <glassfish.home>${project.build.directory}/glassfish8</glassfish.home>
+        <tck_port>8080</tck_port>
+        <glassfish.admin.port>4848</glassfish.admin.port>
+        <tck_protocol>Servlet 6.0</tck_protocol>
+    </properties>
+
+    <dependencies>
+        <!-- Jakarta Data TCK -->
+        <dependency>
+            <groupId>jakarta.data</groupId>
+            <artifactId>jakarta.data-tck</artifactId>
+        </dependency>
+
+        <!-- Jakarta Data API -->
+        <dependency>
+            <groupId>jakarta.data</groupId>
+            <artifactId>jakarta.data-api</artifactId>
+        </dependency>
+
+        <!-- Jakarta CDI API -->
+        <dependency>
+            <groupId>jakarta.enterprise</groupId>
+            <artifactId>jakarta.enterprise.cdi-api</artifactId>
+        </dependency>
+
+        <!-- Jakarta Servlet API -->
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>jakarta.transaction</groupId>
+            <artifactId>jakarta.transaction-api</artifactId>
+            <version>2.0.1</version>
+        </dependency>
+
+        <!-- Arquillian JUnit 5 container -->
+        <dependency>
+            <groupId>org.jboss.arquillian.junit5</groupId>
+            <artifactId>arquillian-junit5-container</artifactId>
+        </dependency>
+
+        <!-- GlassFish Arquillian managed container -->
+        <dependency>
+            <groupId>ee.omnifish.arquillian</groupId>
+            <artifactId>arquillian-glassfish-server-managed</artifactId>
+            <version>${omnifish.arquillian.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- JUnit 5 -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-launcher</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Signature Test -->
+        <dependency>
+            <groupId>jakarta.tck</groupId>
+            <artifactId>sigtest-maven-plugin</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jboss.shrinkwrap</groupId>
+            <artifactId>shrinkwrap-api</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <testResources>
+            <testResource>
+                <directory>${project.basedir}/src/test/resources</directory>
+                <filtering>true</filtering>
+            </testResource>
+        </testResources>
+
+        <plugins>
+            <!-- Surefire Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!-- Execute tests contained in the Jakarta Data TCK dependency -->
+                    <dependenciesToScan>
+                        <dependency>jakarta.data:jakarta.data-tck</dependency>
+                    </dependenciesToScan>
+
+                    <groups>${includedTests}</groups>
+
+                    <systemPropertyVariables>
+                        <glassfish.home>${glassfish.home}</glassfish.home>
+                        <glassfish.admin.port>${glassfish.admin.port}</glassfish.admin.port>
+                        <tck_port>${tck_port}</tck_port>
+                        <tck_hostname>${tck_hostname}</tck_hostname>
+                        <tck_username>${tck_username}</tck_username>
+                        <tck_password>${tck_password}</tck_password>
+                        <tck_protocol>${tck_protocol}</tck_protocol>
+
+                        <!-- GlassFish postBootCommands configure Derby data source -->
+                        <glassfish.postBootCommands>
+                            create-jdbc-connection-pool --datasourceclassname org.apache.derby.jdbc.ClientDataSource --property databaseName=derbyDB:serverName=localhost:portNumber=1527 DerbyPool
+                            create-jdbc-resource --connectionpoolid DerbyPool jdbc/DataTCK
+                            create-jdbc-resource --connectionpoolid DerbyPool DefaultDataSource
+                            list resources.jdbc-connection-pool.*
+                        </glassfish.postBootCommands>
+
+                        <jakarta.tck.skip.deployment>false</jakarta.tck.skip.deployment>
+                    </systemPropertyVariables>
+
+                    <!-- Jakarta TCK tests are supplied by the dependency -->
+                    <testSourceDirectory>${basedir}/src/main/java/</testSourceDirectory>
+
+                    <!-- Windows/JDK classpath URL handling -->
+                    <argLine>
+                        -Djdk.net.URLClassPath.disableClassPathURLCheck=true
+                    </argLine>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
