@@ -2,293 +2,112 @@
 
 ## Overview
 
-This repository provides a reusable runner for executing the Jakarta Data 1.1 TCK against a Jakarta EE runtime.
+This repository provides a multi-provider test runner for executing the Jakarta Data 1.1 TCK against Jakarta EE application servers (including Open Liberty and GlassFish).
 
-The runner is intentionally kept generic. Runtime-specific bugs should be reproduced and diagnosed separately from the runner itself.
+The project is structured as a multi-module Maven reactor:
+* `runners/runner-liberty`: Open Liberty managed runner module
+* `runners/runner-glassfish`: GlassFish managed runner module (Phase 2)
+
+---
 
 ## Prerequisites
 
-Before running the tests, make sure you have:
+Before running the tests, verify your environment:
 
-* JDK 17 or later
-* Maven 3.9 or later
-* Git
-* A Jakarta EE runtime supporting Jakarta Data 1.1
-* A locally built or installed Open Liberty runtime when testing Open Liberty
+* **JDK 17 or 21**
+* **Maven 3.9+**
+* **Git**
+* Pre-built target runtime:
+  * Open Liberty development build image (e.g. `/d/opensource/open-liberty/dev/build.image/wlp`)
+  * GlassFish 8 distribution (e.g. `/d/opensource/glassfish/glassfish8`)
 
 Verify Java and Maven:
-
 ```bash
 java -version
 mvn -version
 ```
 
-## Open Liberty Runtime
+---
 
-The runner can use an existing Open Liberty installation.
+## Running TCK Tests
 
-For a local Open Liberty development build, pass the installation directory explicitly:
+Use Maven's `-pl` (project list) flag to select the target runner module.
 
+### 1. Open Liberty Runner (`runners/runner-liberty`)
+
+#### Run an entire TCK test class:
 ```bash
--Dliberty.installDirectory=/d/opensource/open-liberty/dev/build.image/wlp
+mvn test -pl runners/runner-liberty \
+  "-Dliberty.installDirectory=/d/opensource/open-liberty/dev/build.image/wlp" \
+  "-Dtest=AsyncTests"
 ```
 
-The runtime must contain the Jakarta Data 1.1 feature.
-
-For Open Liberty, verify that the runtime contains:
-
-```text
-lib/features/io.openliberty.data-1.1.mf
-lib/features/io.openliberty.jakarta.data-1.1.mf
-```
-
-## Running the Async TCK
-
-The Phase 1 test can be executed with:
-
+#### Run a specific test method:
 ```bash
-mvn clean verify \
-  -Dliberty.installDirectory=/d/opensource/open-liberty/dev/build.image/wlp \
-  -Dtest=ee.jakarta.tck.data.web.async.AsyncTests
+mvn test -pl runners/runner-liberty \
+  "-Dliberty.installDirectory=/d/opensource/open-liberty/dev/build.image/wlp" \
+  "-Dtest=AsyncTests#testAsynchronousInsertExceptionalCompletion"
 ```
 
-A successful run should report:
-
-```text
-Tests run: 2, Failures: 0, Errors: 0, Skipped: 0
-```
-
-and Maven should finish with:
-
-```text
-BUILD SUCCESS
-```
-
-## Running a Specific Test Method
-
-A specific TCK test method can be selected with Maven Surefire:
-
+#### Run persistence unit / stateful tests:
 ```bash
-mvn clean verify \
-  -Dliberty.installDirectory=/d/opensource/open-liberty/dev/build.image/wlp \
-  -Dtest=ee.jakarta.tck.data.web.async.AsyncTests#testMethodName
+mvn test -pl runners/runner-liberty \
+  "-Dliberty.installDirectory=/d/opensource/open-liberty/dev/build.image/wlp" \
+  "-Dtest=StatefulPersistenceEntityTests#testModifyPersistedEntity"
 ```
 
-Replace `testMethodName` with the actual test method.
+### 2. GlassFish Runner (`runners/runner-glassfish` - Phase 2)
 
-This is useful when investigating a particular TCK scenario.
-
-## Running Other TCK Tests
-
-The runner uses the Jakarta Data TCK as a Maven test dependency and configures Surefire to scan the TCK dependency.
-
-A specific TCK test class can be selected with:
-
+#### Run against GlassFish:
 ```bash
-mvn clean verify \
-  -Dliberty.installDirectory=/path/to/wlp \
-  -Dtest=<TCK-test-class>
+mvn test -pl runners/runner-glassfish \
+  "-Dglassfish.home=/d/opensource/glassfish/glassfish8" \
+  "-Dtest=AsyncTests"
 ```
 
-When adding or investigating a new test area, first verify that the requested test is present in the TCK version resolved by Maven.
+### 3. Cross-Provider Execution
 
-## Verifying Jakarta Data 1.1
-
-The runner must execute against Jakarta Data 1.1.
-
-The Liberty configuration should contain:
-
-```xml
-<feature>data-1.1</feature>
+Run the same test across all configured runner modules sequentially:
+```bash
+mvn test \
+  "-Dliberty.installDirectory=/d/opensource/open-liberty/dev/build.image/wlp" \
+  "-Dglassfish.home=/d/opensource/glassfish/glassfish8" \
+  "-Dtest=AsyncTests"
 ```
 
-It must not accidentally use:
+---
 
-```xml
-<feature>data-1.0</feature>
-```
+## Runtime Verification
 
-When the server starts, check the Liberty console output or server log for the installed features.
-
-A successful configuration should include:
-
-```text
-data-1.1
-```
-
-For example:
-
+### Verifying Open Liberty Feature Installation
+When validating tests against Open Liberty, confirm from server console output that `data-1.1` is installed:
 ```text
 CWWKF0012I: The server installed the following features: [..., data-1.1, ...]
 ```
+The server must not fall back to `data-1.0`.
 
-## Test Database
+### Database Configuration
+`runner-liberty` automatically packages Apache Derby jars (`derby`, `derbytools`, `derbyshared`) into `${wlp}/usr/shared/resources/derby` and initializes `DefaultDataSource` in `server.xml`, eliminating the need for an external database daemon.
 
-The runner uses an embedded Derby database so that tests do not require an externally managed database.
+---
 
-The database configuration is defined in:
+## Diagnosing & Reporting Failures
 
-```text
-src/main/liberty/config/server.xml
-```
+When a TCK test fails, determine whether the failure belongs to the runner harness or the underlying runtime implementation:
 
-The default datasource is:
+### Harness / Configuration Issue (Fix in this repo)
+* Port or JNDI binding conflicts
+* Arquillian adapter classpath collision
+* Embedded Derby driver missing from server shared resources
+* Arquillian container lifecycle timeout
 
-```text
-DefaultDataSource
-```
+### Runtime Implementation Defect (Report to server vendor)
+* Internal NPE or ClassCastException during persistence-unit bootstrap (e.g. Open Liberty #35697)
+* Missing implementation for Jakarta Persistence 4.0 query annotations
+* Unsupported repository return types or async stage lifecycle violations
 
-This provides the default datasource used by Jakarta Data repositories that do not specify another datastore.
-
-## Understanding Test Failures
-
-When a test fails, first determine which layer is responsible.
-
-### Runner or Configuration Failure
-
-Examples include:
-
-* Incorrect Liberty installation directory
-* Incorrect Liberty feature configuration
-* Arquillian cannot start the server
-* TCK deployment fails
-* TCK test discovery fails
-* Datasource configuration is invalid
-* The wrong Jakarta Data feature is installed
-
-These problems should normally be fixed in this repository.
-
-### Runtime Implementation Failure
-
-Examples include:
-
-* An exception inside the Jakarta Data implementation
-* Persistence initialization failure
-* A Jakarta Data implementation defect
-* An unsupported Jakarta EE API required by the test
-* A failure occurring inside the application server before the test body executes
-
-These problems should normally be reproduced independently and reported against the runtime implementation.
-
-The generic runner should not accumulate workarounds for individual runtime defects.
-
-## Clean Test Run
-
-For a clean test run:
-
-```bash
-mvn clean verify \
-  -Dliberty.installDirectory=/d/opensource/open-liberty/dev/build.image/wlp \
-  -Dtest=ee.jakarta.tck.data.web.async.AsyncTests
-```
-
-The `clean` phase removes previous Maven build and test artifacts before execution.
-
-## Reproducing an Issue
-
-When using this repository to reproduce a Jakarta Data TCK issue:
-
-1. Identify the exact TCK test class or method.
-2. Confirm that the test exists in the resolved TCK version.
-3. Confirm the runtime installation being tested.
-4. Confirm that `data-1.1` is installed.
-5. Run the smallest possible test.
-6. Capture the Maven output.
-7. Capture the relevant Liberty server log.
-8. Record the Java and runtime versions.
-9. Determine whether the failure occurs in the runner or runtime implementation.
-
-Example:
-
-```bash
-mvn clean verify \
-  -Dliberty.installDirectory=/path/to/wlp \
-  -Dtest=ee.jakarta.tck.data.web.async.AsyncTests
-```
-
-## Reporting a Failure
-
-When reporting a failure, include:
-
-* Operating system
-* Java version
-* Maven version
-* Jakarta Data TCK version
-* Jakarta Data API version
-* Jakarta EE runtime and version
-* Runtime feature configuration
-* Exact Maven command
-* Test class or method
-* Complete relevant exception and stack trace
-* Relevant Liberty server log
-* Whether the failure occurs during deployment, initialization, or test execution
-
-This information makes it easier to distinguish a runner problem from a runtime implementation problem.
-
-## Runtime Warnings
-
-Not every message printed by the runtime represents a TCK failure.
-
-For example, Liberty may print configuration or datasource-related warnings while the selected TCK test still completes successfully.
-
-A warning should not automatically be treated as a test failure.
-
-The authoritative result is the TCK/Maven test result together with the runtime logs.
-
-## Debugging
-
-When additional diagnostics are required, increase the Liberty logging or Maven output as appropriate.
-
-Avoid permanently adding issue-specific debugging configuration to the generic runner unless it is generally useful for future TCK investigations.
-
-## CI
-
-The same Maven commands used for local testing should remain usable in CI wherever the required Jakarta EE runtime is available.
-
-CI configuration can be added independently from the generic test runner.
-
-## Resuming runs
-
-A helper script is provided to resume an interrupted TCK run by re-running only test classes that did not previously pass. The Windows PowerShell helper is available at scripts\continue-run.ps1.
-
-Usage (example):
-
-```powershell
-powershell -File scripts\continue-run.ps1 -Test ee.jakarta.tck.data.web.async.AsyncTests -LibertyInstallDirectory C:\path\to\wlp
-```
-
-Notes:
-
-- The helper is a best-effort tool that relies on Surefire JUnit XML reports written to target/surefire-reports.
-- You must supply the original test selection (comma-separated) via -Test so the helper can determine remaining tests.
-- The helper parses TEST-*.xml files and treats a testsuite as "passed" when it has zero failures and zero errors.
-
-## Test Philosophy
-
-This project follows a minimal-runner principle:
-
-> The runner should provide the infrastructure required to execute the Jakarta Data TCK, not encode fixes for individual implementation bugs.
-
-When a TCK test exposes a runtime problem, keep the runner generic and track the runtime problem in the appropriate implementation project.
-
-## Before Committing Changes
-
-Before committing changes to the runner or its test configuration, run:
-
-```bash
-mvn clean verify \
-  -Dliberty.installDirectory=/path/to/wlp \
-  -Dtest=ee.jakarta.tck.data.web.async.AsyncTests
-```
-
-Then check for whitespace errors:
-
-```bash
-git diff --check
-```
-
-Review the changes before committing:
-
-```bash
-git diff
-```
+When filing an issue, provide:
+1. Target runner module (`runner-liberty` or `runner-glassfish`)
+2. Exact Maven command line
+3. Full stack trace and server log excerpt
+4. Java, Maven, and target server version/commit
