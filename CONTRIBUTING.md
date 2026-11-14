@@ -1,198 +1,128 @@
 # Contributing
 
-Thank you for contributing to the Jakarta Data TCK EE Runner.
+Thank you for contributing to the Jakarta Data TCK Multi-Provider Runner.
 
-This project is intended to provide a small, reusable runner for executing Jakarta Data TCK tests against Jakarta EE runtimes.
+This project is intended to provide a modular, reusable runner for executing Jakarta Data 1.1 TCK tests against Jakarta EE runtimes (including Open Liberty and GlassFish).
 
-## Project Goals
+## Project Architecture & Principles
 
 Contributions should preserve the following principles:
 
-* Keep the runner generic and reusable.
-* Keep the Maven and Liberty configuration minimal.
-* Support future Jakarta Data TCK scenarios without issue-specific hacks.
-* Make test execution reproducible.
-* Keep runtime-specific defects separate from runner infrastructure.
-* Prefer configuration and documentation improvements over unnecessary custom code.
+* **Keep the Runner Generic & Modular**: Use the multi-module Maven reactor (`runners/runner-liberty`, `runners/runner-glassfish`). Server-specific logic stays inside the server's child runner module.
+* **Centralize Specifications**: Specification versions, TCK dependencies, Arquillian BOMs, and shared test properties belong in the root `pom.xml` (`<dependencyManagement>` / `<pluginManagement>`).
+* **Clean Separation of Concerns**: Keep runtime-specific defects separate from runner infrastructure. Do not add hacks to the generic runner to mask server bugs.
+* **Make Test Execution Reproducible**: Use standard Maven module commands (`-pl runners/runner-<server>`) with explicit server home parameters (`-Dliberty.installDirectory=...`, `-Dglassfish.home=...`).
 
-## Before Making Changes
+---
 
-Create a branch for your change:
+## Workflow: Making Changes
 
-```bash
-git checkout -b <branch-name>
-```
+### 1. Create a Branch
 
-Update your local branch before starting work:
+Update your local `main` branch before starting:
 
 ```bash
 git checkout main
 git pull --ff-only
 ```
 
-Then create your feature or fix branch:
+Create your feature or fix branch:
 
 ```bash
 git checkout -b <branch-name>
 ```
 
-## Making Changes
+### 2. Testing Changes
 
-When changing the runner:
+Verify that existing test executions still pass across the modules:
 
-1. Keep the change focused.
-2. Avoid unrelated formatting changes.
-3. Avoid adding runtime-specific workarounds.
-4. Update documentation when behavior or configuration changes.
-5. Keep existing TCK execution working.
-6. Verify that the Jakarta Data 1.1 feature is still being used.
-
-## Testing Changes
-
-At minimum, run the Phase 1 Async TCK:
-
+#### Open Liberty:
 ```bash
-mvn clean verify \
-  -Dliberty.installDirectory=/path/to/wlp \
-  -Dtest=ee.jakarta.tck.data.web.async.AsyncTests
+mvn test -pl runners/runner-liberty \
+  "-Dliberty.installDirectory=/path/to/wlp" \
+  "-Dtest=AsyncTests#testAsynchronousInsertExceptionalCompletion"
 ```
 
-For the local Open Liberty development build:
-
+#### GlassFish:
 ```bash
-mvn clean verify \
-  -Dliberty.installDirectory=/d/opensource/open-liberty/dev/build.image/wlp \
-  -Dtest=ee.jakarta.tck.data.web.async.AsyncTests
+mvn test -pl runners/runner-glassfish \
+  "-Dglassfish.home=/path/to/glassfish8" \
+  "-Dtest=AsyncTests"
 ```
 
-Also check for whitespace errors:
-
+Check for whitespace errors:
 ```bash
 git diff --check
 ```
 
-Review the final changes:
-
+Review your diff before staging:
 ```bash
 git diff
 ```
 
-## Adding TCK Coverage
+---
 
-When adding support for another TCK test or test area:
+## Adding Support for a New Application Server
 
-1. Confirm that the test exists in the resolved TCK version.
-2. Identify the smallest useful test class or method.
-3. Run the test against the configured Jakarta EE runtime.
-4. Confirm that `data-1.1` is installed.
-5. Determine whether failures originate from the runner or the runtime.
-6. Do not add a workaround solely to make an implementation-specific failure pass.
+When adding a new runner module (e.g. `runners/runner-wildfly`):
 
-## Runtime-Specific Problems
+1. **Create the module directory**: `runners/runner-<server>/src/test/resources`.
+2. **Create the child POM (`runners/runner-<server>/pom.xml`)**:
+   - Inherits from parent `jakarta.data:data-tck-ee-runner`.
+   - Wires the server-specific Arquillian managed container adapter.
+   - Configures the server's data source and port properties.
+   - Configures Surefire `<dependenciesToScan>` pointing to `jakarta.data:jakarta.data-tck`.
+3. **Add `arquillian.xml`**:
+   - Places container configuration in `src/test/resources/arquillian.xml`.
+4. **Register the module**:
+   - Add `<module>runners/runner-<server></module>` to the root `pom.xml`.
+5. **Update Documentation**:
+   - Document the new module in `README.md` and `TESTING.md`.
 
-This repository should not contain workarounds for individual runtime implementation defects.
+---
 
-For example, if a TCK test fails because of an exception inside a Jakarta Data implementation, the preferred approach is to:
+## Runtime-Specific Defects vs. Runner Issues
 
-1. Reproduce the failure using this runner.
-2. Capture the relevant TCK and runtime output.
-3. Create or update the appropriate runtime issue.
-4. Keep the generic runner unchanged unless the runner itself is defective.
+This repository provides an execution harness; it should not contain workarounds for individual runtime implementation bugs.
+
+If a TCK test fails because of an internal server defect (e.g. persistence bootstrap NPE, missing query options support, or classloading issues):
+
+1. Reproduce and verify the failure using this runner.
+2. Capture the exact Maven output and server log excerpt.
+3. Report the issue to the appropriate server repository (e.g., Open Liberty or GlassFish issue tracker).
+4. Keep the runner clean and conformant to the Jakarta Data specification.
+
+---
 
 ## Documentation
 
-Update the appropriate documentation when changing project behavior.
+Always update documentation when modifying configuration or adding new modules:
 
-Relevant files include:
-
-* `README.md` — project overview and quick start
-* `TESTING.md` — testing and troubleshooting
-* `CONTRIBUTING.md` — contribution workflow
+* `README.md` — project overview, module status, and quickstart commands
+* `TESTING.md` — testing matrix, commands, and diagnostic guidelines
+* `CONTRIBUTING.md` — contribution workflow and module development guide
 * `CODE_OF_CONDUCT.md` — community expectations
 * `SECURITY.md` — security reporting
 
-## Commit Messages
+---
 
-Use concise commit messages that describe the change.
+## Commit Messages & Pull Requests
 
-Examples:
-
-```text
-Add testing guide
-Fix Liberty Data 1.1 configuration
-Add TCK test selection documentation
-Update contribution guidelines
-```
-
-Prefer imperative wording such as:
+Use clear, imperative commit messages:
 
 ```text
-Add ...
-Fix ...
-Update ...
-Remove ...
+Add runner-glassfish module
+Update TESTING.md for multi-provider reactor
+Fix Derby datasource configuration in runner-liberty
 ```
-
-## Pull Requests
 
 A pull request should:
+* Describe what change was made and why.
+* Include actual test commands and execution output.
+* Confirm that working-tree checks (`git diff --check`) are clean.
 
-* Clearly describe the change.
-* Explain why the change is needed.
-* Include relevant test results.
-* Keep unrelated changes out of the pull request.
-* Update documentation when appropriate.
-* Identify any known runtime-specific limitations.
-
-Before opening a pull request, verify:
-
-```bash
-git status
-git diff --check
-```
-
-and run the relevant tests.
-
-## Issue Reproduction
-
-When contributing an issue reproducer, provide:
-
-* TCK test class or method
-* Jakarta Data TCK version
-* Jakarta Data API version
-* Java version
-* Jakarta EE runtime and version
-* Runtime feature configuration
-* Maven command
-* Relevant exception
-* Relevant server log
-
-A reproducer should be as small and generic as practical.
-
-## Code and Configuration Style
-
-### Java
-
-Follow normal Java conventions and keep changes simple.
-
-### XML
-
-Keep Liberty and Arquillian configuration readable and consistently formatted.
-
-### Maven
-
-Avoid unnecessary dependencies and plugins.
-
-Changes to the Maven build should have a clear purpose related to TCK execution, reproducibility, or maintainability.
-
-## Review Principle
-
-The primary review question for changes to this repository is:
-
-> Does this make the runner more reusable for current and future Jakarta Data TCK scenarios?
-
-If a change only makes one particular runtime defect pass while making the runner less generic, it should generally not be added.
+---
 
 ## License
 
-By contributing to this repository, you agree that your contributions are provided under the project's applicable license.
+By contributing to this repository, you agree that your contributions are provided under the **Eclipse Public License 2.0**.
